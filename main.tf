@@ -41,10 +41,21 @@ resource "aws_nat_gateway" "nat_gateway" {                        # nat gateway
   depends_on = [aws_internet_gateway.igw] # will be created once igw is created successfully
 }
 
-resource "aws_route" "route_igw" {
-  count                  = length(var.subnets["public"].cidr_block)             # there are 2 public subnets with 2 cidrs
-  route_table_id         = module.subnet["public"].route_table_ids[count.index] # sending only the list of routeids i.e, 2
-  gateway_id             = aws_internet_gateway.igw.id                          # attaching it to internet gateway
-  destination_cidr_block = "0.0.0.0/0"                                          # internet connetion to all address
-  depends_on             = [module.subnet["public"].route_table]   # create based the public route tables
+resource "aws_route" "public_route_igw" {
+  count                  = length(var.subnets["public"].cidr_block)                        # there are 2 public subnets with 2 cidrs
+  route_table_id         = module.subnet["public"].route_table_ids[count.index]            # sending only the list of routeids i.e, 2
+  gateway_id             = aws_internet_gateway.igw.id                                     # attaching it to internet gateway
+  destination_cidr_block = "0.0.0.0/0"                                                     # internet connetion to all address
+  depends_on             = [module.subnet["public"].route_table, aws_internet_gateway.igw] # create based onpublic route tables and igw
 }
+
+resource "aws_route" "private_routes_ngw" {                                       # nat gateway
+  count                  = length(local.all_private_subnet_cidrs)                 # all private subnet_ids
+  route_table_id         = local.all_private_subnet_cidrs[count.index]            # sending only the list of public subnet ids i.e, 2
+  nat_gateway_id         = element(aws_nat_gateway.nat_gateway.*.id, count.index) #  attaching it to nat gateway
+  destination_cidr_block = "0.0.0.0/0"                                            # internet connetion to all address
+  depends_on             = [module.subnet["app"].route_table, module.subnet["web"].route_table, module.subnet["db"].route_table, aws_nat_gateway.nat_gateway]
+  #will be created once app, db and route tables and nat gateways are created successfully
+
+}
+
