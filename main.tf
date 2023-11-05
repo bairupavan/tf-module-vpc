@@ -57,3 +57,7 @@ resource "aws_route" "private_routes_ngw" {                                     
   depends_on             = [module.subnets["app"].route_table, module.subnets["web"].route_table, module.subnets["db"].route_table, aws_nat_gateway.nat_gateway] #will be created once app, db and route tables and nat gateways are created successfully
 }
 
+output "subnets" {
+  value = module.subnets
+}
+
