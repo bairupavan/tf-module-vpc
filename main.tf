@@ -46,5 +46,5 @@ resource "aws_route" "route_igw" {
   route_table_id         = module.subnet["public"].route_table_ids[count.index] # sending only the list of routeids i.e, 2
   gateway_id             = aws_internet_gateway.igw.id                          # attaching it to internet gateway
   destination_cidr_block = "0.0.0.0/0"                                          # internet connetion to all address
-  depends_on             = [module.subnet["public"].route_table[count.index]]   # create based the public route tables
+  depends_on             = [module.subnet["public"].route_table]   # create based the public route tables
 }
