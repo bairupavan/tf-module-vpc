@@ -5,7 +5,7 @@ resource "aws_vpc" "vpc" {              # creating vpc
   tags                 = merge(var.tags, { Name = "${var.env}-vpc" }) # merging the tags
 }
 
-module "subnet" { # calling the subnet module
+module "subnets" { # calling the subnet module
   source = "./subnets"
 
   for_each   = var.subnets              # repeating for each subnet public, app, web and db
@@ -29,10 +29,10 @@ resource "aws_eip" "elastic_ip" {                  # creating elastic ip for nat
   tags  = merge(var.tags, { Name = "${var.env}-eip" }) # tags
 }
 
-resource "aws_nat_gateway" "nat_gateway" {                        # nat gateway
-  count         = length(var.subnets["public"].cidr_block)        # there are 2 public subnets with 2 cidrs
-  allocation_id = aws_eip.elastic_ip[count.index].id              # there are two elastic ips one at a time
-  subnet_id     = module.subnet["public"].subnet_ids[count.index] # sending only the list of public subnet ids i.e, 2
+resource "aws_nat_gateway" "nat_gateway" {                         # nat gateway
+  count         = length(var.subnets["public"].cidr_block)         # there are 2 public subnets with 2 cidrs
+  allocation_id = aws_eip.elastic_ip[count.index].id               # there are two elastic ips one at a time
+  subnet_id     = module.subnets["public"].subnet_ids[count.index] # sending only the list of public subnet ids i.e, 2
 
   tags = merge(var.tags, { Name = "${var.env}-ngw" }) # merge tags
 
@@ -42,20 +42,18 @@ resource "aws_nat_gateway" "nat_gateway" {                        # nat gateway
 }
 
 resource "aws_route" "public_route_igw" {
-  count                  = length(var.subnets["public"].cidr_block)                        # there are 2 public subnets with 2 cidrs
-  route_table_id         = module.subnet["public"].route_table_ids[count.index]            # sending only the list of routeids i.e, 2
-  gateway_id             = aws_internet_gateway.igw.id                                     # attaching it to internet gateway
-  destination_cidr_block = "0.0.0.0/0"                                                     # internet connetion to all address
-  depends_on             = [module.subnet["public"].route_table, aws_internet_gateway.igw] # create based onpublic route tables and igw
+  count                  = length(module.subnets["public"].route_table_ids)                 # there are 2 public subnets with 2 routes tables
+  route_table_id         = module.subnets["public"].route_table_ids[count.index]            # sending only the list of public route ids i.e, 2 routes
+  gateway_id             = aws_internet_gateway.igw.id                                      # attaching this route to internet gateway
+  destination_cidr_block = "0.0.0.0/0"                                                      # internet connetion to all address
+  depends_on             = [module.subnets["public"].route_table, aws_internet_gateway.igw] # create based on public route tables and igw created successfully
 }
 
-resource "aws_route" "private_routes_ngw" {                                       # nat gateway
-  count                  = length(local.all_private_subnet_cidrs)                 # all private subnet_ids
-  route_table_id         = local.all_private_subnet_cidrs[count.index]            # sending only the list of public subnet ids i.e, 2
-  nat_gateway_id         = element(aws_nat_gateway.nat_gateway.*.id, count.index) #  attaching it to nat gateway
-  destination_cidr_block = "0.0.0.0/0"                                            # internet connetion to all address
-  depends_on             = [module.subnet["app"].route_table, module.subnet["web"].route_table, module.subnet["db"].route_table, aws_nat_gateway.nat_gateway]
-  #will be created once app, db and route tables and nat gateways are created successfully
-
+resource "aws_route" "private_routes_ngw" {                                                                                                                      # nat gateway
+  count                  = length(local.all_private_subnet_cidrs)                                                                                                # all private subnet_id routes i.e, 6
+  route_table_id         = local.all_private_subnet_cidrs[count.index]                                                                                           # sending only the list of private subnet id routes i.e, 6 app, web and db
+  nat_gateway_id         = element(aws_nat_gateway.nat_gateway.*.id, count.index)                                                                                # attaching routes of same private subnet to two diff nat gates
+  destination_cidr_block = "0.0.0.0/0"                                                                                                                           # internet connetion to all address
+  depends_on             = [module.subnets["app"].route_table, module.subnets["web"].route_table, module.subnets["db"].route_table, aws_nat_gateway.nat_gateway] #will be created once app, db and route tables and nat gateways are created successfully
 }
 
