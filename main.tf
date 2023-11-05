@@ -29,7 +29,7 @@ resource "aws_eip" "elastic_ip" {                  # creating elastic ip for nat
   tags  = merge(var.tags, { Name = "${var.env}-eip" }) # tags
 }
 
-resource "aws_nat_gateway" "example" {                            # nat gateway
+resource "aws_nat_gateway" "nat_gateway" {                        # nat gateway
   count         = length(var.subnets["public"].cidr_block)        # there are 2 public subnets with 2 cidrs
   allocation_id = aws_eip.elastic_ip[count.index].id              # there are two elastic ips one at a time
   subnet_id     = module.subnet["public"].subnet_ids[count.index] # sending only the list of public subnet ids i.e, 2
