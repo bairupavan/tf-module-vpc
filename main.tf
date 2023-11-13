@@ -70,13 +70,15 @@ resource "aws_vpc_peering_connection" "vpc_peering" {
 resource "aws_route" "vpc_peering_connection_route" {
   count                     = length(local.all_private_subnet_cidrs)
   route_table_id            = element(local.all_private_subnet_cidrs, count.index)
-  destination_cidr_block    = "0.0.0.0/0"
+  destination_cidr_block    = var.default_vpc_cidr
   vpc_peering_connection_id = aws_vpc_peering_connection.vpc_peering.id
+  depends_on = [aws_vpc_peering_connection.vpc_peering, module.subnets["app"].route_table, module.subnets["web"].route_table, module.subnets["db"].route_table]
 }
 
 # creating the connection between default vpc and and routes
 resource "aws_route" "vpc_peering_connection_route_in_default_vpc" {
   route_table_id            = var.default_vpc_route_id
-  destination_cidr_block    = var.default_vpc_cidr
+  destination_cidr_block    = var.cidr_block
   vpc_peering_connection_id = aws_vpc_peering_connection.vpc_peering.id
+  depends_on = [aws_vpc_peering_connection.vpc_peering]
 }
