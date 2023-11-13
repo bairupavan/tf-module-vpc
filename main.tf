@@ -59,3 +59,25 @@ resource "aws_route" "private_routes_ngw" {                                     
   destination_cidr_block = "0.0.0.0/0"                                                                                                                           # internet connetion to all address
   depends_on             = [module.subnets["app"].route_table, module.subnets["web"].route_table, module.subnets["db"].route_table, aws_nat_gateway.nat_gateway] #will be created once app, db and route tables and nat gateways are created successfully
 }
+
+# creating vpc connection peering between this above vpc and default aws vpc
+resource "aws_vpc_peering_connection" "vpc_peering" {
+  peer_vpc_id = var.default_vpc_id
+  vpc_id      = aws_vpc.vpc.id
+  auto_accept = true
+}
+
+# creating connections between all private routes and vpc peer
+resource "aws_route" "vpc_peering_connection_route" {
+  count                     = length(local.all_private_subnet_cidrs)
+  route_table_id            = element(local.all_private_subnet_cidrs, count.index)
+  destination_cidr_block    = "0.0.0.0/0"
+  vpc_peering_connection_id = aws_vpc_peering_connection.vpc_peering.id
+}
+
+# creating the connection between default vpc and and routes
+resource "aws_route" "vpc_peering_connection_route_in_default_vpc" {
+  route_table_id            = var.default_vpc_route_id
+  destination_cidr_block    = var.default_vpc_cidr
+  vpc_peering_connection_id = aws_vpc_peering_connection.vpc_peering.id
+}
