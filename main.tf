@@ -57,7 +57,6 @@ resource "aws_route" "private_routes_ngw" {                                     
   route_table_id         = local.all_private_subnet_cidrs[count.index]                                                                                           # sending only the list of private subnet id routes i.e, 6 app, web and db
   nat_gateway_id         = element(aws_nat_gateway.nat_gateway.*.id, count.index)                                                                                # attaching routes of same private subnet to two diff nat gates
   destination_cidr_block = "0.0.0.0/0"                                                                                                                           # internet connetion to all address
-  depends_on             = [module.subnets["app"].route_table, module.subnets["web"].route_table, module.subnets["db"].route_table, aws_nat_gateway.nat_gateway] #will be created once app, db and route tables and nat gateways are created successfully
 }
 
 # creating vpc connection peering between this above vpc and default aws vpc
