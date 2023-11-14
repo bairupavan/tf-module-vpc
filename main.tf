@@ -64,6 +64,7 @@ resource "aws_vpc_peering_connection" "vpc_peering" {
   peer_vpc_id = var.default_vpc_id
   vpc_id      = aws_vpc.vpc.id
   auto_accept = true
+  tags = { Name = "${var.env}-vpc-peering"}
 }
 
 # creating connections between all private routes and vpc peer
